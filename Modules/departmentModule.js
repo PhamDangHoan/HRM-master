@@ -104,7 +104,7 @@ function displayList(container) {
                     <td>${d.id}</td>
                     <td>${d.name}</td>
                     <td><strong>${(d.level || 1).toFixed(1)}x</strong></td>
-                    <td>${d.managerId || 'Chưa có'}</td>
+                    <td>${d.managerId ? getManagerName(d.managerId) : 'Chưa có'}</td>
                     <td>
                         <button onclick="editDept(${d.id})">✏️ Sửa</button>
                         <button onclick="deleteDept(${d.id})">🗑️ Xóa</button>
@@ -114,6 +114,11 @@ function displayList(container) {
         </tbody>
     `;
     container.appendChild(table);
+}
+// GET MANAGER NAME: Hiển thị tên quản lý từ ID
+function getManagerName(managerId) {
+    const employee = EmployeeDb.getAllEmployees().find(e => e.id === managerId);
+    return employee ? employee.name : 'ID không hợp lệ';
 }
 
 // GLOBAL EDIT: Trigger edit mode
@@ -197,4 +202,5 @@ export function init(container) {
     displayList(container);
     
     console.log('✅ Department module loaded');
+
 }
