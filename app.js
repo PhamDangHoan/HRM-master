@@ -1,92 +1,101 @@
 // TỔNG HỢP + ROUTING + ERROR HANDLING + GLOBAL FUNCTIONS
-import * as Auth from './Module/authModule.js';                    // XÁC THỰC NGƯỜI DÙNG
-import * as EmployeeDb from './Module/employeeDbModule.js';       // DATABASE NHÂN VIỆN
-import * as EmployeeManagement from './Module/employeeManagementModule.js';  // QUẢN LÝ NHÂN VIỆN
-import * as SearchEmployee from './Module/searchEmployeeModule.js';         //  TÌM KIẾM NHÂN VIỆN
-import * as Department from './Module/departmentModule.js';       //  PHÒNG BAN
-import * as Position from './Module/positionModule.js';           // VỊ TRÍ
-import * as Salary from './Module/salaryModule.js';               //  LƯƠNG THƯỞNG
-import * as Attendance from './Module/attendanceModule.js';       //  CHẤM CÔNG
-import * as Leave from './Module/leaveModule.js';                 //  NGHỈ PHÉP
-import * as Performance from './Module/performanceModule.js';     //  ĐÁNH GIÁ HIỆU SUẤT
+import * as Auth from './Modules/authModule.js';                    // XÁC THỰC NGƯỜI DÙNG
+import * as EmployeeDb from './Modules/employeeDbModule.js';       // DATABASE NHÂN VIỆN
+import * as EmployeeManagement from './Modules/employeeManagementModule.js';  // QUẢN LÝ NHÂN VIỆN
+import * as SearchEmployee from './Modules/searchEmployeeModule.js';         // TÌM KIẾM NHÂN VIỆN
+import * as Department from './Modules/departmentModule.js';       // PHÒNG BAN
+import * as Position from './Modules/positionModule.js';           // VỊ TRÍ
+import * as Salary from './Modules/salaryModule.js';               // LƯƠNG THƯỞNG
+import * as Attendance from './Modules/attendanceModule.js';       // CHẤM CÔNG
+import * as Leave from './Modules/leaveModule.js';                 // NGHỈ PHÉP
+import * as Performance from './Modules/performanceModule.js';     // ĐÁNH GIÁ HIỆU SUẤT
 
-//  MODULE REGISTRY: DANH SÁCH TẤT CẢ MODULES (ROUTING MAP)
+// MODULE REGISTRY: DANH SÁCH TẤT CẢ MODULES (ROUTING MAP)
 const modules = {
-    employeeManagement: EmployeeManagement,     // ROUTE: /employee-management → Bảng danh sách NV
-    searchEmployee: SearchEmployee,             // ROUTE: /search → Tìm kiếm NV
-    department: Department,                     // ROUTE: /department → Quản lý phòng ban
-    position: Position,                         // ROUTE: /position → Quản lý vị trí
-    salary: Salary,                             // ROUTE: /salary → Quản lý lương
-    attendance: Attendance,                     // ROUTE: /attendance → Chấm công
-    leave: Leave,                               // ROUTE: /leave → Nghỉ phép
-    performance: Performance                    // ROUTE: /performance → Đánh giá
+    employeeManagement: EmployeeManagement,
+    searchEmployee: SearchEmployee,
+    department: Department,
+    position: Position,
+    salary: Salary,
+    attendance: Attendance,
+    leave: Leave,
+    performance: Performance
 };
 
-//  GLOBAL ERROR HANDLER: BẮT MỌI LỖI TRONG ỨNG DỤNG
+// GLOBAL ERROR HANDLER: BẮT MỌI LỖI TRONG ỨNG DỤNG
 window.onerror = function (message, source, lineno, colno, error) {
-    // LOG: Chi tiết lỗi cho developer
     console.error('Global error:', message);
-    // ALERT: Thông báo thân thiện cho user
     alert('Đã xảy ra lỗi: ' + message);
 };
 
-//  MAIN INITIALIZATION: CHẠY KHI PAGE LOAD XONG
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🎉 App starting...');
-    
-    // BƯỚC 1: SETUP AUTH FORMS (login/register UI)
-    Auth.setupAuthForms();
-    
-    // BƯỚC 2: CHECK LOGIN STATUS → SHOW DASHBOARD HOẶC LOGIN FORM
-    if (Auth.isLoggedIn()) {
-        console.log('✅ User logged in → Show Dashboard');
-        showDashboard();                             // USER ĐÃ LOGIN → DASHBOARD
-    } else {
-        console.log('🔐 User not logged in → Show Login');
-        // SHOW: Auth container + Login form
-        document.getElementById('auth-container').style.display = 'block';
-        document.getElementById('login-form').style.display = 'block';
-    }
-});
-
-//  SHOW DASHBOARD: HIỂN THỊ GIAO DIỆN CHÍNH SAU LOGIN
-function showDashboard() {
+// SHOW DASHBOARD: HIỂN THỊ GIAO DIỆN CHÍNH SAU LOGIN
+export function showDashboard() {
     // HIDE: Auth screens
     document.getElementById('auth-container').style.display = 'none';
     
     // SHOW: Main dashboard
     document.getElementById('dashboard').style.display = 'flex';
     
+    // RENDER: Dashboard content
+    const mainContent = document.getElementById('main-content');
+    mainContent.innerHTML = ''; // CLEAR: Nội dung cũ
+    const employees = EmployeeDb.getAllEmployees();
+    const totalSalary = employees.reduce((sum, emp) => {
+        const pos = Position.getAllPositions().find(p => p.id === emp.positionId);
+        const dept = Department.getAllDepartments().find(d => d.id === emp.departmentId);
+        const baseSalary = pos ? pos.salaryBase : emp.salary;
+        const deptFactor = dept?.level || 1;
+        return sum + Math.round(baseSalary * deptFactor);
+    }, 0);
+    
+    mainContent.innerHTML = `
+        <h2>\u{1F4D1} Tóm tắt thông tin</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <p>Tổng Nhân viên</p>
+                <h3>${employees.length}</h3>
+            </div>
+            <div class="stat-card">
+                <p>Tổng Lương</p>
+                <h3>${totalSalary.toLocaleString()}$</h3>
+                
+            </div>
+            <div class="stat-card">
+                <p>Số phòng ban</p>
+                <h3>${Department.getAllDepartments().length}</h3>
+                
+            </div>
+            <div class="stat-card">
+                <p>Số vị trí</p>
+                <h3>${Position.getAllPositions().length}</h3>
+                
+            </div>
+        </div>
+    `;
+    
     // SETUP: Menu navigation
     setupMenu();
     
     // SETUP: Logout button
     document.getElementById('logout').addEventListener('click', (e) => {
-        e.preventDefault();                          // NGĂN: Default link behavior
-        Auth.logout();                               // CALL: Clear session
-        location.reload();                           // RELOAD: Back to login
+        e.preventDefault();
+        Auth.logout();
+        location.reload();
     });
     
     console.log('✅ Dashboard loaded');
 }
 
-//  SETUP MENU: CLICK MENU → LOAD MODULE TƯƠNG ỨNG
+// SETUP MENU: CLICK MENU → LOAD MODULE TƯƠNG ỨNG
 function setupMenu() {
-    // GET: Tất cả menu links có data-module attribute
     const links = document.querySelectorAll('#sidebar a[data-module]');
     
     links.forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault();                      // NGĂN: Page jump
-            
-            // GET: Module name từ data attribute
+            e.preventDefault();
             const moduleName = link.dataset.module;
-            
-            // UI: Active state cho menu
             document.querySelectorAll('#sidebar a').forEach(l => l.classList.remove('active'));
             link.classList.add('active');
-            
-            // LOAD: Module tương ứng
             loadModule(moduleName);
         });
     });
@@ -94,51 +103,61 @@ function setupMenu() {
     console.log('✅ Menu setup complete');
 }
 
-//  LOAD MODULE: CORE ROUTING FUNCTION
+// LOAD MODULE: CORE ROUTING FUNCTION
 function loadModule(moduleName) {
     console.log('Loading module:', moduleName);
-    
-    // GET: Main content area
     const mainContent = document.getElementById('main-content');
-    mainContent.innerHTML = '';                      // CLEAR: Nội dung cũ
+    mainContent.innerHTML = '';
     
-    // CHECK: Module tồn tại?
     if (!modules[moduleName] || typeof modules[moduleName].init !== 'function') {
-        // ERROR: Module không tồn tại
         mainContent.innerHTML = `<p>Module ${moduleName} không tồn tại!</p>`;
         console.error('❌ Module not found:', moduleName);
         return;
     }
     
     try {
-        // CALL: Module.init(container) → Render UI
         modules[moduleName].init(mainContent);
         console.log('✅ Module loaded:', moduleName);
     } catch (error) {
-        // ERROR HANDLING: Hiển thị lỗi user-friendly
         console.error('❌ Error loading module:', moduleName, error);
         mainContent.innerHTML = `<p>Lỗi: ${error.message}</p>`;
     }
 }
 
-//  EXPORT: REFRESH DASHBOARD - DÙNG TRONG CÁC MODULE
-// FIXED: Hàm này cho phép module tự refresh khi data thay đổi
+// EXPORT: REFRESH DASHBOARD - DÙNG TRONG CÁC MODULE
 export function refreshDashboard() {
-    // TÌM: Menu item đang active
     const activeLink = document.querySelector('#sidebar a.active');
     if (activeLink) {
-        // RELOAD: Module hiện tại
         loadModule(activeLink.dataset.module);
         console.log('🔄 Dashboard refreshed');
+    } else {
+        showDashboard(); // Nếu không có module active, quay lại dashboard
     }
 }
 
-// EXPORT: DEBOUNCE - TỐI ỨU VALIDATION REAL-TIME
-// TRÁNH: Gọi function quá nhiều khi user gõ nhanh
+// EXPORT: DEBOUNCE - TỐI ƯU VALIDATION REAL-TIME
 export function debounce(func, delay = 300) {
-    let timeout;                                     // STORAGE: Timer ID
-    return (...args) => {                            // RETURN: Wrapped function
-        clearTimeout(timeout);                       // CLEAR: Timer cũ
-        timeout = setTimeout(() => func(...args), delay); // SET: Timer mới
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), delay);
     };
 }
+
+// MAIN INITIALIZATION: CHẠY KHI PAGE LOAD XONG
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🎉 App starting...');
+    
+    // BƯỚC 1: SETUP AUTH FORMS (login UI)
+    Auth.setupAuthForms();
+    
+    // BƯỚC 2: CHECK LOGIN STATUS → SHOW DASHBOARD HOẶC LOGIN FORM
+    if (Auth.isLoggedIn()) {
+        console.log('✅ User logged in → Show Dashboard');
+        showDashboard();
+    } else {
+        console.log('🔐 User not logged in → Show Login');
+        document.getElementById('auth-container').style.display = 'block';
+        document.getElementById('login-form').style.display = 'block';
+    }
+});
